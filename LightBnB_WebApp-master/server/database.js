@@ -77,43 +77,56 @@ exports.getAllReservations = getAllReservations;
  * @param {*} limit The number of results to return.
  * @return {Promise<[{}]>}  A promise to the properties.
  */
-const getAllProperties = (obj,limit = 10) => {
-  // console.log(obj);
-  if (!obj.city && !obj.minimum_price_per_night && !obj.maximum_price_per_night && !obj.minimum_rating && !obj.owner_id) {
-    const text = `SELECT properties.*, avg(property_reviews.rating) as average_rating
-    FROM properties
-    JOIN property_reviews ON properties.id = property_id
-    GROUP BY properties.id
-    ORDER BY cost_per_night
-    LIMIT $1`;
-    return pool
-      .query(text, [limit])
-      .then((result) => result.rows)
-      .catch((err) => {
-        console.log(err.message);
-      });
+const getAllProperties = (options, limit = 10) => {
+  // 1
+  const queryParams = [];//储存参数例如$1
+  // 2
+  let queryString = `
+  SELECT properties.*, avg(property_reviews.rating) as average_rating
+  FROM properties
+  JOIN property_reviews ON properties.id = property_id
+  WHERE 1=1
+  `;//储存sql语句
+
+  // 3
+  if (options.city) {
+    queryParams.push(`%${options.city}%`);//like '%%' = no where clause
+    queryString += `AND city LIKE $${queryParams.indexOf(`%${options.city}%`) + 1} `;
   }
-  obj.city = obj.city === '' ? '%' : obj.city;
-  obj.minimum_price_per_night = obj.minimum_price_per_night === '' ? 0 : obj.minimum_price_per_night * 100;
-  obj.maximum_price_per_night = obj.maximum_price_per_night === '' ? 999999999 : obj.maximum_price_per_night * 100;
-  obj.minimum_rating = obj.minimum_rating === '' ? 0 : obj.minimum_rating;
-  
-  return pool
-    .query(`SELECT properties.*, avg(property_reviews.rating) as average_rating
-    FROM properties
-    JOIN property_reviews ON property_id = properties.id
-    WHERE city like $1
-    AND cost_per_night >= $2
-    AND cost_per_night <= $3
-    AND rating >= $4
-    GROUP BY properties.id
-    ORDER BY cost_per_night
-    LIMIT $5`, [obj.city,obj.minimum_price_per_night,obj.maximum_price_per_night,obj.minimum_rating,limit])
-    .then((result) => result.rows)
-    // .then((result) => console.log(result.rows))
-    .catch((err) => {
-      console.log(err.message);
-    });
+  //4
+  if (options.owner_id) {
+    queryParams.push(`%${options.owner_id}%`);//like '%%' = no where clause
+    queryString += `AND owner_id = $${queryParams.indexOf(`%${options.owner_id}%`) + 1} `;
+  }
+  //5
+  if (options.minimum_price_per_night) {
+    queryParams.push(options.minimum_price_per_night * 100);
+    queryString += `AND cost_per_night >= $${queryParams.indexOf(options.minimum_price_per_night * 100) + 1} `;
+  }
+  //6
+  if (options.maximum_price_per_night) {
+    queryParams.push(options.maximum_price_per_night * 100);
+    queryString += `AND cost_per_night <= $${queryParams.indexOf(options.maximum_price_per_night * 100) + 1} `;
+  }
+  //7
+  if (options.minimum_rating) {
+    queryParams.push(options.minimum_rating);
+    queryString += `AND rating >= $${queryParams.indexOf(options.minimum_rating) + 1} `;
+  }
+
+  // 8
+  queryParams.push(limit);
+  queryString += `
+  GROUP BY properties.id
+  ORDER BY cost_per_night
+  LIMIT $${queryParams.indexOf(limit) + 1};
+  `;
+
+  // 9
+  // console.log(queryString, queryParams);
+
+  // 10
+  return pool.query(queryString, queryParams).then((res) => res.rows);
 };
 
 
