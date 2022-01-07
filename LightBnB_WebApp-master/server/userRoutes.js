@@ -1,3 +1,4 @@
+/* eslint-disable indent */
 const bcrypt = require('bcrypt');
 
 module.exports = function(router, database) {
@@ -24,18 +25,18 @@ module.exports = function(router, database) {
    * @param {String} password encrypted
    */
   const login =  function(email, password) {
-    return database.getUserWithEmail(email)
+    return database.getUserWithEmail(email)//pass email to database and get user's info
     .then(user => {
       if (bcrypt.compareSync(password, user.password)) {
         return user;
       }
       return null;
     });
-  }
+  };
   exports.login = login;
 
   router.post('/login', (req, res) => {
-    const {email, password} = req.body;
+    const {email, password} = req.body;//get email and password from user's login input
     login(email, password)
       .then(user => {
         if (!user) {
@@ -73,4 +74,4 @@ module.exports = function(router, database) {
   });
 
   return router;
-}
+};
