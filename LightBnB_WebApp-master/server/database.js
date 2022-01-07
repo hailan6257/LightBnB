@@ -79,7 +79,7 @@ exports.getAllReservations = getAllReservations;
  */
 const getAllProperties = (obj,limit = 10) => {
   // console.log(obj);
-  if (!obj.city && !obj.minimum_price_per_night && !obj.maximum_price_per_night && !obj.minimum_rating) {
+  if (!obj.city && !obj.minimum_price_per_night && !obj.maximum_price_per_night && !obj.minimum_rating && !obj.owner_id) {
     const text = `SELECT properties.*, avg(property_reviews.rating) as average_rating
     FROM properties
     JOIN property_reviews ON properties.id = property_id
